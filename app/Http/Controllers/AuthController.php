@@ -212,8 +212,8 @@ class AuthController extends Controller
         }
 
         return response()->json([
-            'masked_email' => $user->email ? $this->maskEmail($user->email) : null,
-            'masked_phone' => $user->phone ? $this->maskPhone($user->phone) : null,
+            'email' => $user->email,
+            'phone' => $user->phone,
         ]);
     }
 
@@ -294,27 +294,6 @@ class AuthController extends Controller
         return response()->json(['reset_token' => $resetToken]);
     }
 
-    private function maskEmail(string $email): string
-    {
-        [$local, $domain] = explode('@', $email, 2);
-        $maskedLocal = strlen($local) <= 2
-            ? str_repeat('*', strlen($local))
-            : $local[0] . str_repeat('*', strlen($local) - 2) . $local[-1];
-        $dotPos      = strrpos($domain, '.');
-        $domainName  = substr($domain, 0, $dotPos);
-        $tld         = substr($domain, $dotPos);
-        $maskedDomain = strlen($domainName) <= 1
-            ? str_repeat('*', strlen($domainName))
-            : $domainName[0] . str_repeat('*', strlen($domainName) - 1);
-        return $maskedLocal . '@' . $maskedDomain . $tld;
-    }
-
-    private function maskPhone(string $phone): string
-    {
-        $len = strlen($phone);
-        if ($len <= 4) return str_repeat('*', $len);
-        return substr($phone, 0, 3) . str_repeat('*', $len - 5) . substr($phone, -2);
-    }
 
     public function resetPassword(Request $request)
     {
