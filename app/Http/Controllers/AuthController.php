@@ -7,9 +7,11 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
 use App\Models\Referral;
 use App\Models\User;
+use App\Models\PasswordResetOtp;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -199,32 +201,107 @@ class AuthController extends Controller
 
     public function forgotPassword(Request $request)
     {
-        $request->validate(['email' => 'required|email']);
-        Password::sendResetLink($request->only('email'));
-        return response()->json(['message' => 'If that email exists, a password reset link has been sent.']);
+        $request->validate(['identifier' => 'required|string']);
+
+        $identifier = $request->identifier;
+        $field = filter_var($identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+        $user  = User::where($field, $identifier)->first();
+
+        // Always return success to avoid enumeration
+        if (!$user) {
+            return response()->json([
+                'message' => 'If that account exists, an OTP has been sent.',
+                'method'  => $field === 'email' ? 'email' : 'sms',
+            ]);
+        }
+
+        // Invalidate previous OTPs
+        PasswordResetOtp::where('identifier', $identifier)
+            ->whereNull('verified_at')
+            ->update(['expires_at' => now()]);
+
+        $otp  = str_pad(random_int(0, 9999), 4, '0', STR_PAD_LEFT);
+        $hash = hash('sha256', $otp);
+
+        PasswordResetOtp::create([
+            'identifier' => $identifier,
+            'code'       => $hash,
+            'expires_at' => now()->addMinutes(15),
+        ]);
+
+        if ($field === 'phone') {
+            app(SmsService::class)->send(
+                $identifier,
+                "Your DolilBD password reset OTP is {$otp}. Valid for 15 minutes."
+            );
+        } else {
+            Mail::raw(
+                "Your DolilBD password reset OTP is: {$otp}\n\nThis OTP is valid for 15 minutes.\n\nIf you did not request this, please ignore this email.",
+                fn($msg) => $msg->to($user->email)->subject('DolilBD Password Reset OTP')
+            );
+        }
+
+        return response()->json([
+            'message' => 'If that account exists, an OTP has been sent.',
+            'method'  => $field === 'email' ? 'email' : 'sms',
+        ]);
+    }
+
+    public function verifyResetOtp(Request $request)
+    {
+        $request->validate([
+            'identifier' => 'required|string',
+            'otp'        => 'required|string|size:4',
+        ]);
+
+        $record = PasswordResetOtp::where('identifier', $request->identifier)
+            ->whereNull('verified_at')
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->first();
+
+        if (!$record || !hash_equals($record->code, hash('sha256', $request->otp))) {
+            return response()->json(['message' => 'Invalid or expired OTP.'], 422);
+        }
+
+        $resetToken = Str::random(64);
+
+        $record->update([
+            'verified_at' => now(),
+            'reset_token' => hash('sha256', $resetToken),
+        ]);
+
+        return response()->json(['reset_token' => $resetToken]);
     }
 
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'token'    => 'required',
-            'email'    => 'required|email',
-            'password' => 'required|min:8|confirmed',
+            'reset_token' => 'required|string',
+            'password'    => 'required|min:8|confirmed',
         ]);
 
-        $status = Password::reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function ($user, $password) {
-                $user->forceFill(['password' => Hash::make($password)])->save();
-                $user->tokens()->delete();
-            }
-        );
+        $record = PasswordResetOtp::whereNotNull('verified_at')
+            ->where('reset_token', hash('sha256', $request->reset_token))
+            ->where('verified_at', '>', now()->subMinutes(30))
+            ->first();
 
-        if ($status === Password::PASSWORD_RESET) {
-            return response()->json(['message' => 'Password reset successfully.']);
+        if (!$record) {
+            return response()->json(['message' => 'Invalid or expired reset token.'], 422);
         }
 
-        return response()->json(['message' => __($status)], 422);
+        $field = filter_var($record->identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+        $user  = User::where($field, $record->identifier)->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found.'], 422);
+        }
+
+        $user->forceFill(['password' => Hash::make($request->password)])->save();
+        $user->tokens()->delete();
+        $record->delete();
+
+        return response()->json(['message' => 'Password reset successfully.']);
     }
 
     public function creditReferrer(User $user): void
