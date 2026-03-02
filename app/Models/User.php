@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -99,6 +100,15 @@ class User extends Authenticatable implements MustVerifyEmail
     public function referredBy()
     {
         return $this->belongsTo(User::class, 'referred_by');
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+        ResetPassword::createUrlUsing(fn($notifiable, $token) =>
+            $frontendUrl . '/reset-password?token=' . $token . '&email=' . urlencode($notifiable->email)
+        );
+        $this->notify(new ResetPassword($token));
     }
 
     // Helpers
