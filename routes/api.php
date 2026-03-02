@@ -32,7 +32,8 @@ Route::post('/deed-writers/{user}/appointments', [AppointmentController::class, 
 // Public
 Route::post('/register',         [AuthController::class, 'register']);
 Route::post('/login',            [AuthController::class, 'login']);
-Route::post('/forgot-password',    [AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
+Route::post('/lookup-account',     [AuthController::class, 'lookupAccount'])->middleware('throttle:5,1');
+Route::post('/send-reset-otp',     [AuthController::class, 'sendResetOtp'])->middleware('throttle:3,1');
 Route::post('/verify-reset-otp',   [AuthController::class, 'verifyResetOtp'])->middleware('throttle:5,1');
 Route::post('/reset-password',     [AuthController::class, 'resetPassword']);
 

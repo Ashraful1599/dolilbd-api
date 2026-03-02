@@ -199,7 +199,7 @@ class AuthController extends Controller
         return new UserResource($request->user()->fresh()->load(['divisionRel', 'districtRel', 'upazila']));
     }
 
-    public function forgotPassword(Request $request)
+    public function lookupAccount(Request $request)
     {
         $request->validate(['identifier' => 'required|string']);
 
@@ -207,16 +207,33 @@ class AuthController extends Controller
         $field = filter_var($identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
         $user  = User::where($field, $identifier)->first();
 
-        // Always return success to avoid enumeration
         if (!$user) {
-            return response()->json([
-                'message' => 'If that account exists, an OTP has been sent.',
-                'method'  => $field === 'email' ? 'email' : 'sms',
-            ]);
+            return response()->json(['message' => 'No account found with that email or phone.'], 404);
         }
 
-        // Invalidate previous OTPs
-        PasswordResetOtp::where('identifier', $identifier)
+        return response()->json([
+            'masked_email' => $user->email ? $this->maskEmail($user->email) : null,
+            'masked_phone' => $user->phone ? $this->maskPhone($user->phone) : null,
+        ]);
+    }
+
+    public function sendResetOtp(Request $request)
+    {
+        $request->validate([
+            'identifier' => 'required|string',
+            'method'     => 'required|in:email,phone',
+        ]);
+
+        $field   = filter_var($request->identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+        $user    = User::where($field, $request->identifier)->first();
+        $contact = $user?->{$request->method};
+
+        if (!$user || !$contact) {
+            return response()->json(['message' => 'Account or contact method not found.'], 404);
+        }
+
+        // Invalidate previous OTPs for this contact
+        PasswordResetOtp::where('identifier', $contact)
             ->whereNull('verified_at')
             ->update(['expires_at' => now()]);
 
@@ -224,37 +241,40 @@ class AuthController extends Controller
         $hash = hash('sha256', $otp);
 
         PasswordResetOtp::create([
-            'identifier' => $identifier,
+            'identifier' => $contact,
             'code'       => $hash,
             'expires_at' => now()->addMinutes(15),
         ]);
 
-        if ($field === 'phone') {
-            app(SmsService::class)->send(
-                $identifier,
-                "Your DolilBD password reset OTP is {$otp}. Valid for 15 minutes."
-            );
+        if ($request->method === 'phone') {
+            app(SmsService::class)->send($contact, "Your DolilBD password reset OTP is {$otp}. Valid for 15 minutes.");
         } else {
             Mail::raw(
                 "Your DolilBD password reset OTP is: {$otp}\n\nThis OTP is valid for 15 minutes.\n\nIf you did not request this, please ignore this email.",
-                fn($msg) => $msg->to($user->email)->subject('DolilBD Password Reset OTP')
+                fn($msg) => $msg->to($contact)->subject('DolilBD Password Reset OTP')
             );
         }
 
-        return response()->json([
-            'message' => 'If that account exists, an OTP has been sent.',
-            'method'  => $field === 'email' ? 'email' : 'sms',
-        ]);
+        return response()->json(['message' => 'OTP sent successfully.']);
     }
 
     public function verifyResetOtp(Request $request)
     {
         $request->validate([
             'identifier' => 'required|string',
+            'method'     => 'required|in:email,phone',
             'otp'        => 'required|string|size:4',
         ]);
 
-        $record = PasswordResetOtp::where('identifier', $request->identifier)
+        $field   = filter_var($request->identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'phone';
+        $user    = User::where($field, $request->identifier)->first();
+        $contact = $user?->{$request->method};
+
+        if (!$user || !$contact) {
+            return response()->json(['message' => 'Invalid or expired OTP.'], 422);
+        }
+
+        $record = PasswordResetOtp::where('identifier', $contact)
             ->whereNull('verified_at')
             ->where('expires_at', '>', now())
             ->latest()
@@ -272,6 +292,28 @@ class AuthController extends Controller
         ]);
 
         return response()->json(['reset_token' => $resetToken]);
+    }
+
+    private function maskEmail(string $email): string
+    {
+        [$local, $domain] = explode('@', $email, 2);
+        $maskedLocal = strlen($local) <= 2
+            ? str_repeat('*', strlen($local))
+            : $local[0] . str_repeat('*', strlen($local) - 2) . $local[-1];
+        $dotPos      = strrpos($domain, '.');
+        $domainName  = substr($domain, 0, $dotPos);
+        $tld         = substr($domain, $dotPos);
+        $maskedDomain = strlen($domainName) <= 1
+            ? str_repeat('*', strlen($domainName))
+            : $domainName[0] . str_repeat('*', strlen($domainName) - 1);
+        return $maskedLocal . '@' . $maskedDomain . $tld;
+    }
+
+    private function maskPhone(string $phone): string
+    {
+        $len = strlen($phone);
+        if ($len <= 4) return str_repeat('*', $len);
+        return substr($phone, 0, 3) . str_repeat('*', $len - 5) . substr($phone, -2);
     }
 
     public function resetPassword(Request $request)
