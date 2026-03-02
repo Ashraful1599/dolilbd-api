@@ -4,18 +4,20 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DeedPayment extends Model
+class DolilPayment extends Model
 {
-    protected $fillable = ['deed_id', 'recorded_by', 'amount', 'paid_at', 'notes'];
+    protected $table = 'dolil_payments';
+
+    protected $fillable = ['dolil_id', 'recorded_by', 'amount', 'paid_at', 'notes'];
 
     protected $casts = [
         'amount'  => 'decimal:2',
         'paid_at' => 'date',
     ];
 
-    public function deed()
+    public function dolil()
     {
-        return $this->belongsTo(Deed::class);
+        return $this->belongsTo(Dolil::class);
     }
 
     public function recorder()

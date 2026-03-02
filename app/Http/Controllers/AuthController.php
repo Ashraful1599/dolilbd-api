@@ -61,7 +61,7 @@ class AuthController extends Controller
         // Send verification email
         $user->sendEmailVerificationNotification();
 
-        $token = $user->createToken('deed-app')->plainTextToken;
+        $token = $user->createToken('dolil-app')->plainTextToken;
 
         return response()->json([
             'user'              => new UserResource($user),
@@ -101,7 +101,7 @@ class AuthController extends Controller
             ], 403);
         }
 
-        $token = $user->createToken('deed-app')->plainTextToken;
+        $token = $user->createToken('dolil-app')->plainTextToken;
 
         return response()->json([
             'user'  => new UserResource($user),

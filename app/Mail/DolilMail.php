@@ -1,7 +1,7 @@
 <?php
 namespace App\Mail;
 
-use App\Models\Deed;
+use App\Models\Dolil;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
 
-class DeedMail extends Mailable
+class DolilMail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -18,8 +18,8 @@ class DeedMail extends Mailable
         public readonly string $recipientName,
         public readonly string $subject,
         public readonly string $message,
-        public readonly string $deedTitle,
-        public readonly string $deedUrl,
+        public readonly string $dolilTitle,
+        public readonly string $dolilUrl,
     ) {}
 
     public function envelope(): Envelope
@@ -29,27 +29,27 @@ class DeedMail extends Mailable
 
     public function content(): Content
     {
-        return new Content(view: 'emails.deed_event');
+        return new Content(view: 'emails.dolil_event');
     }
 
     /**
-     * Send an email to a user about a deed event. Silently ignores failures.
+     * Send an email to a user about a dolil event. Silently ignores failures.
      */
-    public static function sendTo(User $recipient, string $subject, string $message, Deed $deed): void
+    public static function sendTo(User $recipient, string $subject, string $message, Dolil $dolil): void
     {
         try {
             $frontendUrl = rtrim(config('app.frontend_url', env('FRONTEND_URL', 'http://localhost:3000')), '/');
-            $deedUrl     = $frontendUrl . '/dashboard/deeds/' . $deed->id;
+            $dolilUrl    = $frontendUrl . '/dashboard/dolils/' . $dolil->id;
 
             Mail::to($recipient->email)->send(new self(
                 recipientName: $recipient->name,
                 subject:       $subject,
                 message:       $message,
-                deedTitle:     $deed->title,
-                deedUrl:       $deedUrl,
+                dolilTitle:    $dolil->title,
+                dolilUrl:      $dolilUrl,
             ));
         } catch (\Throwable $e) {
-            \Log::error('DeedMail failed: ' . $e->getMessage());
+            \Log::error('DolilMail failed: ' . $e->getMessage());
         }
     }
 }

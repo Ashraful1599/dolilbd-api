@@ -24,13 +24,13 @@
               <p style="margin:0 0 8px;font-size:15px;color:#374151;">Hi {{ $recipientName }},</p>
               <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.6;">{{ $message }}</p>
 
-              <!-- Deed card -->
+              <!-- Dolil card -->
               <table width="100%" cellpadding="0" cellspacing="0"
                 style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:28px;">
                 <tr>
                   <td style="padding:16px 20px;">
-                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;">Deed</p>
-                    <p style="margin:0;font-size:15px;font-weight:600;color:#111827;">{{ $deedTitle }}</p>
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;">Dolil</p>
+                    <p style="margin:0;font-size:15px;font-weight:600;color:#111827;">{{ $dolilTitle }}</p>
                   </td>
                 </tr>
               </table>
@@ -39,9 +39,9 @@
               <table cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="background:#2563eb;border-radius:8px;">
-                    <a href="{{ $deedUrl }}" target="_blank"
+                    <a href="{{ $dolilUrl }}" target="_blank"
                       style="display:inline-block;padding:12px 24px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;border-radius:8px;">
-                      View Deed →
+                      View Dolil →
                     </a>
                   </td>
                 </tr>
@@ -53,7 +53,7 @@
           <tr>
             <td style="padding:16px 32px;border-top:1px solid #f3f4f6;">
               <p style="margin:0;font-size:12px;color:#9ca3af;">
-                You received this because you are a party to this deed.
+                You received this because you are a party to this dolil.
                 <br>DolilBD · Legal Document System
               </p>
             </td>

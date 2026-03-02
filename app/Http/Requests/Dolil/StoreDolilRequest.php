@@ -1,7 +1,7 @@
 <?php
-namespace App\Http\Requests\Deed;
+namespace App\Http\Requests\Dolil;
 use Illuminate\Foundation\Http\FormRequest;
-class StoreDeedRequest extends FormRequest {
+class StoreDolilRequest extends FormRequest {
     public function authorize(): bool { return true; }
     public function rules(): array {
         return [

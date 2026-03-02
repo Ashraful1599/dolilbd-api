@@ -6,11 +6,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Deed extends Model
+class Dolil extends Model
 {
     use HasFactory, SoftDeletes;
 
     const STATUSES = ['draft', 'under_review', 'completed', 'archived'];
+
+    protected $table = 'dolils';
 
     protected $fillable = [
         'deed_number', 'title', 'description', 'created_by', 'assigned_to', 'status', 'notes',
@@ -39,26 +41,26 @@ class Deed extends Model
 
     public function reviews()
     {
-        return $this->hasMany(DeedReview::class);
+        return $this->hasMany(DolilReview::class);
     }
 
     public function activities()
     {
-        return $this->hasMany(DeedActivity::class);
+        return $this->hasMany(DolilActivity::class);
     }
 
     public function payments()
     {
-        return $this->hasMany(DeedPayment::class);
+        return $this->hasMany(DolilPayment::class);
     }
 
     /**
-     * Check if a user can access this deed.
+     * Check if a user can access this dolil.
      */
     public function canAccess(User $user): bool
     {
         return $user->isAdmin()
-            || $user->role === 'deed_writer'
+            || $user->role === 'dolil_writer'
             || $this->created_by == $user->id
             || $this->assigned_to == $user->id;
     }
@@ -69,7 +71,7 @@ class Deed extends Model
     public function canChangeStatus(User $user): bool
     {
         return $user->isAdmin()
-            || $user->role === 'deed_writer'
+            || $user->role === 'dolil_writer'
             || $this->assigned_to == $user->id
             || $this->created_by  == $user->id;
     }
@@ -88,8 +90,8 @@ class Deed extends Model
 
         $all = $map[$this->status] ?? [];
 
-        // Admin and deed_writer can set any status
-        if ($user->isAdmin() || $user->role === 'deed_writer') {
+        // Admin and dolil_writer can set any status
+        if ($user->isAdmin() || $user->role === 'dolil_writer') {
             return array_values(array_diff(array_keys($map), [$this->status]));
         }
 

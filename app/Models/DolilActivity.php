@@ -3,9 +3,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class DeedActivity extends Model
+class DolilActivity extends Model
 {
-    protected $fillable = ['deed_id', 'user_id', 'action', 'description', 'meta'];
+    protected $table = 'dolil_activities';
+
+    protected $fillable = ['dolil_id', 'user_id', 'action', 'description', 'meta'];
 
     protected $casts = ['meta' => 'array'];
 
@@ -14,15 +16,15 @@ class DeedActivity extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function deed()
+    public function dolil()
     {
-        return $this->belongsTo(Deed::class);
+        return $this->belongsTo(Dolil::class);
     }
 
-    public static function log(int $deedId, ?int $userId, string $action, string $description, array $meta = []): void
+    public static function log(int $dolilId, ?int $userId, string $action, string $description, array $meta = []): void
     {
         self::create([
-            'deed_id'     => $deedId,
+            'dolil_id'    => $dolilId,
             'user_id'     => $userId,
             'action'      => $action,
             'description' => $description,

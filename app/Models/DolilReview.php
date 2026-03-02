@@ -5,15 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class DeedReview extends Model
+class DolilReview extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['deed_id', 'reviewer_id', 'rating', 'body'];
+    protected $table = 'dolil_reviews';
 
-    public function deed()
+    protected $fillable = ['dolil_id', 'reviewer_id', 'rating', 'body'];
+
+    public function dolil()
     {
-        return $this->belongsTo(Deed::class);
+        return $this->belongsTo(Dolil::class);
     }
 
     public function reviewer()
