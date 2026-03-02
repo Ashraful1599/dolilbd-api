@@ -91,10 +91,13 @@ class AuthController extends Controller
 
         // Allow login if either email or phone is verified
         if (!$user->hasVerifiedEmail() && !$user->phone_verified_at) {
+            $verifyToken = $user->createToken('verify-only')->plainTextToken;
             return response()->json([
                 'message'        => 'Please verify your email address or phone number before logging in.',
                 'email_verified' => false,
                 'email'          => $user->email,
+                'phone'          => $user->phone,
+                'verify_token'   => $verifyToken,
             ], 403);
         }
 
